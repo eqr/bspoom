@@ -5,8 +5,11 @@ import (
 	"bspoom/app/level"
 	"fmt"
 	rl "github.com/gen2brain/raylib-go/raylib"
+	"image/color"
 	"math"
 )
+
+const scale = 12.0
 
 type MapRenderer interface {
 	Draw()
@@ -39,10 +42,28 @@ func (mr mapRenderer) Draw() {
 func (mr mapRenderer) DrawRawSegments() {
 	for _, segment := range mr.rawSegments {
 		rl.DrawLineV(segment.P1.ToVector(), segment.P2.ToVector(), rl.Orange)
+
+		mr.DrawNormal(segment.P1, segment.P2, rl.Orange, scale)
+
 		xCenter := int32(segment.P1.X)
 		yCenter := int32(segment.P1.Y)
 		rl.DrawCircle(xCenter, yCenter, 3.0, rl.White)
 	}
+}
+
+func (mr mapRenderer) DrawNormal(p0, p1 level.Point, color color.RGBA, scale float32) {
+	// middle of the vector
+	p10 := level.Point{X: p1.X - p0.X, Y: p1.Y - p0.Y}
+	// rotate 90 degrees
+	p10rotated := level.Point{X: -10 * p10.Y, Y: 10 * p10.X}
+
+	normal := p10rotated.Normalize()
+
+	// beginning of normal vector
+	n0 := level.Point{X: (p1.X + p0.X) * 0.5, Y: (p1.Y + p0.Y) * 0.5}
+	// end of normal vector
+	n1 := level.Point{X: n0.X + normal.X*scale, Y: n0.Y + normal.Y*scale}
+	rl.DrawLineV(n0.ToVector(), n1.ToVector(), color)
 }
 
 // TODO isolate it to remaper

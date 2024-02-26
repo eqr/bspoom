@@ -2,10 +2,23 @@ package level
 
 import (
 	rl "github.com/gen2brain/raylib-go/raylib"
+	"math"
 )
 
 type Point struct {
 	X, Y float32
+}
+
+// TODO consider using an OpenGL-powered method for this
+// Magnitude method calculates the magnitude of the vector
+func (p Point) Magnitude() float32 {
+	return float32(math.Sqrt(float64(p.X*p.X + p.Y*p.Y)))
+}
+
+// Normalize method normalizes the vector
+func (p Point) Normalize() Point {
+	magnitude := p.Magnitude()
+	return Point{X: p.X / magnitude, Y: p.Y / magnitude}
 }
 
 func (p Point) ToVector() rl.Vector2 {
