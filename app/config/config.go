@@ -5,11 +5,12 @@ const (
 )
 
 type Config struct {
-	WinWidth  int
-	WinHeight int
-	MapWidth  int
-	MapHeight int
-	MapOffset int
+	WinWidth   int
+	WinHeight  int
+	MapWidth   int
+	MapHeight  int
+	MapOffset  int
+	FloatDelta float64
 }
 
 func NewConfig() Config {
@@ -21,5 +22,6 @@ func NewConfig() Config {
 
 	c.MapWidth = c.WinWidth - mapOffset
 	c.MapHeight = c.WinHeight - mapOffset
+	c.FloatDelta = 0.0001
 	return c
 }

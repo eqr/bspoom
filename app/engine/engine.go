@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"bspoom/app/bsp"
 	"bspoom/app/config"
 	"bspoom/app/level"
 	"bspoom/app/lmap"
@@ -12,19 +13,25 @@ type Engine interface {
 	Draw()
 }
 
-func NewEngine(levelData level.LevelData, cfg config.Config) Engine {
+func NewEngine(levelData level.LevelData, bspBuilder *bsp.Builder, cfg config.Config) Engine {
+	//bspTree := bspBuilder.Build(levelData)
+	tree := bspBuilder.Build(levelData)
+	bspTraverser := bsp.NewTraverser(tree, levelData.Segments)
 	return &engine{
 		LevelData:   levelData,
-		mapRenderer: lmap.NewRenderer(levelData, cfg),
+		mapRenderer: lmap.NewRenderer(levelData, bspBuilder, bspTraverser, cfg),
+		traverser:   bspTraverser,
 	}
 }
 
 type engine struct {
 	level.LevelData
 	mapRenderer lmap.MapRenderer
+	traverser   *bsp.Traverser
 }
 
 func (e *engine) Update() {
+	e.traverser.Update()
 }
 
 func (e *engine) Draw2D() {

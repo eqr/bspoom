@@ -1,6 +1,7 @@
 package lmap
 
 import (
+	"bspoom/app/bsp"
 	"bspoom/app/config"
 	"bspoom/app/level"
 	"fmt"
@@ -20,38 +21,61 @@ type mapRenderer struct {
 	levelData              level.LevelData
 	rawSegments            []level.Segment
 	xMin, yMin, xMax, yMax float32
+	segments               []level.Segment
+	counter                float32
+	traverser              *bsp.Traverser
 }
 
-func NewRenderer(levelData level.LevelData, cfg config.Config) mapRenderer {
+func NewRenderer(levelData level.LevelData, builder *bsp.Builder, traverser *bsp.Traverser, cfg config.Config) *mapRenderer {
 	mr := mapRenderer{
 		levelData: levelData,
+		counter:   0,
+		traverser: traverser,
 		cfg:       cfg,
 	}
 	mr.xMin, mr.yMin, mr.xMax, mr.yMax = getBounds(levelData.Segments)
 	fmt.Println(mr.xMin, mr.yMin, mr.xMax, mr.yMax)
 
 	mr.rawSegments = mr.RemapSegments(levelData.Segments)
-
-	return mr
+	mr.segments = mr.RemapSegments(builder.GetSegments())
+	return &mr
 }
 
-func (mr mapRenderer) Draw() {
+func (mr *mapRenderer) Draw() {
 	mr.DrawRawSegments()
+	mr.DrawSegments(rl.Orange)
+	mr.DrawPlayer()
+	mr.counter += 0.0005
 }
 
-func (mr mapRenderer) DrawRawSegments() {
-	for _, segment := range mr.rawSegments {
-		rl.DrawLineV(segment.P1.ToVector(), segment.P2.ToVector(), rl.Orange)
+func (mr *mapRenderer) DrawPlayer() {
+	p := mr.RemapPoint(mr.traverser.GetCameraPosition())
+	rl.DrawCircleV(p.ToVector(), 10, rl.Green)
+}
 
-		mr.DrawNormal(segment.P1, segment.P2, rl.Orange, scale)
+func (mr *mapRenderer) DrawSegments(color color.RGBA) {
+	upperBound := int(mr.counter) % (len(mr.traverser.GetSegmentIDsToDraw()) + 1)
+	fmt.Println(mr.counter, len(mr.traverser.GetSegmentIDsToDraw())+1, upperBound)
 
-		xCenter := int32(segment.P1.X)
-		yCenter := int32(segment.P1.Y)
-		rl.DrawCircle(xCenter, yCenter, 3.0, rl.White)
+	for _, segmentID := range mr.traverser.GetSegmentIDsToDraw()[:upperBound] {
+		seg := mr.segments[segmentID]
+		p1 := seg.P1
+		p2 := seg.P2
+
+		rl.DrawLineV(p1.ToVector(), p2.ToVector(), color)
+		mr.DrawNormal(p1, p2, color, scale)
+		rl.DrawCircleV(p1.ToVector(), 3, rl.White)
 	}
 }
 
-func (mr mapRenderer) DrawNormal(p0, p1 level.Point, color color.RGBA, scale float32) {
+// DrawRawSegments draws the raw segments with barely visible lines.
+func (mr *mapRenderer) DrawRawSegments() {
+	for _, segment := range mr.rawSegments {
+		rl.DrawLineV(segment.P1.ToVector(), segment.P2.ToVector(), rl.DarkGray)
+	}
+}
+
+func (mr *mapRenderer) DrawNormal(p0, p1 level.Point, color color.RGBA, scale float32) {
 	// middle of the vector
 	p10 := level.Point{X: p1.X - p0.X, Y: p1.Y - p0.Y}
 	// rotate 90 degrees
@@ -67,7 +91,7 @@ func (mr mapRenderer) DrawNormal(p0, p1 level.Point, color color.RGBA, scale flo
 }
 
 // TODO isolate it to remaper
-func (mr mapRenderer) RemapSegments(segments []level.Segment) []level.Segment {
+func (mr *mapRenderer) RemapSegments(segments []level.Segment) []level.Segment {
 	res := make([]level.Segment, len(segments))
 	for ix, segment := range segments {
 		res[ix] = mr.RemapSegment(segment)
@@ -75,23 +99,23 @@ func (mr mapRenderer) RemapSegments(segments []level.Segment) []level.Segment {
 	return res
 }
 
-func (mr mapRenderer) RemapSegment(s level.Segment) level.Segment {
+func (mr *mapRenderer) RemapSegment(s level.Segment) level.Segment {
 	p1 := mr.RemapPoint(s.P1)
 	p2 := mr.RemapPoint(s.P2)
 	return level.Segment{P1: p1, P2: p2}
 }
 
-func (mr mapRenderer) RemapPoint(p level.Point) level.Point {
+func (mr *mapRenderer) RemapPoint(p level.Point) level.Point {
 	x := mr.RemapX(p.X)
 	y := mr.RemapY(p.Y)
 	return level.Point{X: x, Y: y}
 }
 
-func (mr mapRenderer) RemapX(x float32) float32 {
+func (mr *mapRenderer) RemapX(x float32) float32 {
 	return (x-mr.xMin)*float32(mr.cfg.MapWidth-mr.cfg.MapOffset)/(mr.xMax-mr.xMin) + float32(mr.cfg.MapOffset)
 }
 
-func (mr mapRenderer) RemapY(y float32) float32 {
+func (mr *mapRenderer) RemapY(y float32) float32 {
 	return (y-mr.yMin)*float32(mr.cfg.MapHeight-mr.cfg.MapOffset)/(mr.yMax-mr.yMin) + float32(mr.cfg.MapOffset)
 }
 

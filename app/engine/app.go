@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"bspoom/app/bsp"
 	"bspoom/app/config"
 	"bspoom/app/level"
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -14,10 +15,11 @@ type App struct {
 
 func NewApp(cfg config.Config) *App {
 	levelData := level.NewLevelData(level.Segments)
+	builder := bsp.NewBuilder(cfg)
 	return &App{
 		cfg:       cfg,
 		deltaTime: 0.0,
-		engine:    NewEngine(levelData, cfg),
+		engine:    NewEngine(levelData, builder, cfg),
 	}
 }
 
