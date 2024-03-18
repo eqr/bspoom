@@ -55,7 +55,6 @@ func (mr *mapRenderer) DrawPlayer() {
 
 func (mr *mapRenderer) DrawSegments(color color.RGBA) {
 	upperBound := int(mr.counter) % (len(mr.traverser.GetSegmentIDsToDraw()) + 1)
-	fmt.Println(mr.counter, len(mr.traverser.GetSegmentIDsToDraw())+1, upperBound)
 
 	for _, segmentID := range mr.traverser.GetSegmentIDsToDraw()[:upperBound] {
 		seg := mr.segments[segmentID]

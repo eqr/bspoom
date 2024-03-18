@@ -14,7 +14,7 @@ type App struct {
 }
 
 func NewApp(cfg config.Config) *App {
-	levelData := level.NewLevelData(level.Segments)
+	levelData := level.NewLevelData(level.Segments, level.Seed)
 	builder := bsp.NewBuilder(cfg)
 	return &App{
 		cfg:       cfg,

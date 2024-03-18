@@ -3,27 +3,39 @@ package bsp
 import (
 	"bspoom/app/config"
 	"bspoom/app/level"
+	"bspoom/app/utils/slice"
 	"fmt"
 	"math"
 )
 
 type Builder struct {
 	config.Config
-	segments  []level.Segment //segments created during the bsp tree building
-	segmentID int
+	segments                     []level.Segment //segments created during the bsp tree building
+	segmentID                    int
+	numFront, numBack, numSplits int
 }
 
 func NewBuilder(cfg config.Config) *Builder {
 	return &Builder{
-		cfg,
-		[]level.Segment{},
-		0,
+		Config:   cfg,
+		segments: []level.Segment{},
 	}
 }
 
 func (b *Builder) Build(levelData level.LevelData) *Node {
+	var seed int64
+	if levelData.Seed == 0 {
+		seed = b.getBestSeed(0, 50000, 3, levelData.Segments)
+	} else {
+		seed = levelData.Seed
+	}
+
+	segments := slice.Shuffle(levelData.Segments, seed)
 	n := &Node{}
-	b.buildTree(n, levelData.Segments)
+	b.buildTree(n, segments)
+	fmt.Println("numFront", b.numFront)
+	fmt.Println("numBack", b.numBack)
+	fmt.Println("numSplits", b.numSplits)
 	return n
 }
 
@@ -33,15 +45,15 @@ func (b *Builder) buildTree(n *Node, segments []level.Segment) {
 	}
 
 	frontSegments, backSegments := b.splitSpace(n, segments)
-	fmt.Println("frontSegments", frontSegments)
-	fmt.Println("backSegments", backSegments)
 
 	if len(backSegments) > 0 {
+		b.numBack++
 		n.Back = &Node{}
 		b.buildTree(n.Back, backSegments)
 	}
 
 	if len(frontSegments) > 0 {
+		b.numFront++
 		n.Front = &Node{}
 		b.buildTree(n.Front, frontSegments)
 	}
@@ -77,6 +89,7 @@ func (b *Builder) splitSpace(node *Node, segments []level.Segment) ([]level.Segm
 
 			// segments that are not parallel and t is in (0,1) should be split
 			if intersection > 0.0 && intersection < 1.0 {
+				b.numSplits++
 				intersectionPoint := segment.P1.Plus(segmentVec.Multiply(intersection))
 				rightSegment := segment.Copy()
 				rightSegment.P1 = segment.P1
@@ -117,4 +130,28 @@ func (b *Builder) AddSegment(segment level.Segment, node *Node) {
 
 func (b *Builder) GetSegments() []level.Segment {
 	return b.segments
+}
+
+func (b *Builder) getBestSeed(startSeed, endSeed, weightFactor int64, levelSegments []level.Segment) int64 {
+	bestSeed := int64(-1)
+	bestScore := math.MaxFloat32
+	var seed int64
+	for seed = startSeed; seed < endSeed; seed++ {
+		segments := make([]level.Segment, len(levelSegments))
+		copy(segments, levelSegments)
+		segments = slice.Shuffle(segments, seed)
+		fmt.Println(segments)
+		candidateBuilder := NewBuilder(b.Config)
+		rootNode := &Node{}
+		candidateBuilder.buildTree(rootNode, segments)
+		score := math.Abs(float64(candidateBuilder.numBack-candidateBuilder.numFront)) + float64(weightFactor*int64(candidateBuilder.numSplits))
+		fmt.Println(candidateBuilder.numBack, candidateBuilder.numFront, candidateBuilder.numSplits, score)
+		if score < bestScore {
+			bestScore = score
+			bestSeed = seed
+		}
+	}
+
+	fmt.Println("bestSeed", bestSeed, "bestScore", bestScore)
+	return bestSeed
 }
